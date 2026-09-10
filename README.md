@@ -12,16 +12,38 @@ A simplified Splitwise with strict tenant isolation, built as three services:
 
 **Prereqs:** Python 3.11+, Node 18+.
 
-### 1. Django core API
+### ⚡ Fastest: one command, one terminal
+
 ```bash
+# from the repo root — installs nothing, just starts everything
+python dev.py
+```
+
+That starts Django (+ port 8000), the settlement service (8001), and the
+React frontend (5173) as **background processes in the single terminal**,
+merges their logs with `[django]` / `[settle]` / `[vite]` prefixes, and
+`Ctrl+C` stops all of them. Skip anything you don't need with
+`python dev.py --no-frontend` (also `--no-backend`, `--no-settle`).
+
+Windows alternative that opens each service in its **own window**:
+double-click `start_dev.bat` (or run it from the terminal). Close each
+window to stop that service.
+
+### Manually (three terminals — the conventional way)
+
+Each of these is a long-running process that blocks its terminal, which is
+why the manual route needs three of them:
+
+```bash
+# Terminal 1 — Django core API
 cd backend
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver 127.0.0.1:8000
 ```
 
-### 2. FastAPI settlement service
 ```bash
+# Terminal 2 — FastAPI settlement service
 cd settlement_service
 pip install -r requirements.txt
 # uses the same DJANGO_SECRET_KEY (default matches backend dev key)
@@ -29,8 +51,8 @@ pip install -r requirements.txt
 uvicorn main:app --port 8001
 ```
 
-### 3. React frontend
 ```bash
+# Terminal 3 — React frontend
 cd frontend
 npm install
 npm run dev        # http://localhost:5173
