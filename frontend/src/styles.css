@@ -66,4 +66,11 @@ button.ghost {
   box-shadow: 0 4px 12px rgba(0,0,0,.1); list-style: none; padding: 4px; z-index: 10;
 }
 .matches li { padding: 7px 10px; border-radius: 6px; }
+.user-chip { margin-left: auto; font-size: 0.85rem; background: #e8f0fe; color: #1a4d8f; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+  .welcome { margin: 0 0 10px; color: #1c2430; font-size: 13.5px; }
+  .you { color: #1a4d8f; font-weight: 500; }
+  .loader {
+    font-size: 15px; color: #6b7686; padding: 40px 0; text-align: center;
+  }
+
 .matches li:hover { background: #f0f4ff; }

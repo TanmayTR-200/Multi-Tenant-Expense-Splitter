@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, fmt } from './api';
+import { api, fmt, getToken } from './api';
 
 export default function Groups({ onOpen }) {
   const [groups, setGroups] = useState([]);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const user = getToken() ? decodeJwtUsername(getToken()) : null;
 
   const load = () => api.groups().then(setGroups).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -21,6 +22,9 @@ export default function Groups({ onOpen }) {
 
   return (
     <main className="content">
+      <div className="welcome">
+        {user && <span className="you">Signed in as <strong>{user}</strong></span>}
+      </div>
       <h2>Your groups</h2>
       <form className="row" onSubmit={create}>
         <input placeholder="New group name" required value={name}
@@ -44,4 +48,13 @@ export default function Groups({ onOpen }) {
       </ul>
     </main>
   );
+}
+
+function decodeJwtUsername(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.username || payload.sub || '';
+  } catch {
+    return '';
+  }
 }
