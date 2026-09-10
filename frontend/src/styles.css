@@ -36,8 +36,22 @@ button.ghost {
 .list li { padding: 9px 0; border-bottom: 1px solid #eef1f5; }
 .list li:last-child { border-bottom: none; }
 .muted { color: #6b7686; font-size: 14px; }
+.small { font-size: 12.5px; }
 .link { cursor: pointer; text-decoration: underline; }
 .pos { color: #0c8a4d; font-weight: 600; }
 .neg { color: #c62828; font-weight: 600; }
 .error { color: #c62828; font-size: 14px; margin-top: 6px; }
 .clickable { cursor: pointer; }
+.callout {
+  background: #fff7e6; border: 1px solid #ffd98a; color: #7a5b12;
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px;
+}
+.add-member { position: relative; padding-top: 10px; border-top: 1px solid #eef1f5; }
+.search-box { flex: 1; position: relative; min-width: 0; }
+.matches {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; margin: 0;
+  background: #fff; border: 1px solid #cfd6e0; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1); list-style: none; padding: 4px; z-index: 10;
+}
+.matches li { padding: 7px 10px; border-radius: 6px; }
+.matches li:hover { background: #f0f4ff; }

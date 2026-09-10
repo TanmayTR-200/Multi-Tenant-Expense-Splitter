@@ -48,6 +48,12 @@ export const api = {
   groups: () => req('/groups/'),
   createGroup: (name) => req('/groups/', { method: 'POST', body: { name } }),
   group: (id) => req(`/groups/${id}/`),
+  searchUsers: (q) => req(`/users/?q=${encodeURIComponent(q.trim())}`),
+  addMember: (groupId, username) =>
+    req(`/groups/${groupId}/members/`, {
+      method: 'POST',
+      body: { username },
+    }),
   addExpense: (groupId, description, amountCents, splits) => {
     const body = { description, amount_cents: amountCents };
     if (splits) body.splits = splits;

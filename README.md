@@ -59,10 +59,12 @@ npm run dev        # http://localhost:5173
 ```
 
 ### Try it
-1. Register two accounts.
-2. Alice creates a group, adds Bob (**username must be exact**).
-3. Alice adds an expense — it is split **equally** among all members.
-4. Open the group detail and press **Settle up** to see who pays whom.
+1. Register two accounts (e.g. `alice` and `bob`).
+2. Alice creates a group, then opens it and **adds Bob from the Members card** —
+   start typing Bob's username and pick him from the suggestions.
+3. Alice or Bob adds an expense — it is split **equally** among all members.
+   Every expense row shows who paid and each member's share.
+4. Press **See who owes whom** to view the minimal settlement.
 
 ## API surface
 
@@ -74,7 +76,8 @@ npm run dev        # http://localhost:5173
 | POST | `/api/groups/` | user JWT | create a group |
 | GET  | `/api/groups/<id>/` | user JWT + membership | group + balances + expenses |
 | POST | `/api/groups/<id>/` | user JWT + membership | add expense; `paid_by` is always the caller |
-| POST | `/api/groups/<id>/members/` | user JWT + creator only | add an existing user by username |
+| POST | `/api/groups/<id>/members/` | user JWT + **creator** | add an existing user by `{"username": "bob"}` |
+| GET  | `/api/users/?q=bob` | user JWT | search registered usernames (member picker) |
 | GET  | `/api/internal/groups/<id>/` | user JWT + `X-Internal-Token` | settlement service only |
 | POST | `/settle` | user JWT | body `{"group_id": N}` → minimal transfers |
 

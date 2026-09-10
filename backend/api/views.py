@@ -89,6 +89,18 @@ def add_member(request, group_id):
     return Response({'id': user.id, 'username': user.username}, status=201)
 
 
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def search_users(request):
+    """Look up registered users by username prefix (to add as members).
+    Returns at most 10 matches; only active usernames are exposed."""
+    q = (request.query_params.get('q') or '').strip()
+    if not q:
+        return Response([])
+    users = User.objects.filter(username__istartswith=q, is_active=True)[:10]
+    return Response([{'id': u.id, 'username': u.username} for u in users])
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([permissions.IsAuthenticated])
 def group_detail(request, group_id):
@@ -117,6 +129,8 @@ def group_detail(request, group_id):
         return Response({
             'id': group.id, 'name': group.name, 'members': ser.get_members(group),
             'your_balance_cents': ser.get_your_balance_cents(group),
+            'is_creator': group.created_by_id == request.user.id,
+            'created_by': group.created_by.username,
             'balances': [
                 {'user_id': uid, 'username': members.get(uid, '?'), 'balance_cents': bal}
                 for uid, bal in balances.items()

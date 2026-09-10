@@ -150,3 +150,17 @@ class ExpenseTests(Base):
         res = self.client.get(f'/api/groups/{self.group.id}/', **auth(self.alice))
         balances = {b['username']: b['balance_cents'] for b in res.json()['balances']}
         self.assertEqual(balances, {'alice': 50, 'bob': -50})
+
+    def test_group_detail_flags_creator(self):
+        res = self.client.get(f'/api/groups/{self.group.id}/', **auth(self.alice))
+        self.assertTrue(res.json()['is_creator'])
+        self.assertEqual(res.json()['created_by'], 'alice')
+        res = self.client.get(f'/api/groups/{self.group.id}/', **auth(self.bob))
+        self.assertFalse(res.json()['is_creator'])
+
+    def test_search_users(self):
+        res = self.client.get('/api/users/?q=ali', **auth(self.bob))
+        self.assertEqual([u['username'] for u in res.json()], ['alice'])
+
+    def test_search_users_requires_auth(self):
+        self.assertEqual(self.client.get('/api/users/?q=ali').status_code, 401)

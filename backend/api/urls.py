@@ -10,4 +10,5 @@ urlpatterns = [
     path('groups/<int:group_id>/members/', views.add_member),
     path('groups/<int:group_id>/settlement-data/', views.internal_group_data),
     path('internal/groups/<int:group_id>/', views.internal_group_data),
+    path('users/', views.search_users),
 ]
