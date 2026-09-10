@@ -54,11 +54,16 @@ def pump(name, stream):
     try:
         for raw in iter(stream.readline, b''):
             text = raw.decode('utf-8', 'replace').rstrip()
-            if text:
+            if not text:
+                continue
+            try:
                 tag = f'[{name}]'
                 if COLOR:
                     tag = f'\x1b[90m{tag:<9}\x1b[0m'
                 print(f'{tag} {text}', flush=True)
+            except Exception:
+                # Never let a logging hiccup kill the reader thread.
+                pass
     finally:
         stream.close()
 
@@ -79,6 +84,14 @@ def wait_until_up(port, timeout=60):
 
 
 def main():
+    # Windows consoles default to cp1252; force UTF-8 so child-process
+    # output with non-ASCII characters (e.g. Vite's "➜") can't crash us.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
     ap = argparse.ArgumentParser(description='Run all services in one terminal.')
     ap.add_argument('--no-backend', action='store_true', help='skip Django API')
     ap.add_argument('--no-settle', action='store_true', help='skip settlement service')

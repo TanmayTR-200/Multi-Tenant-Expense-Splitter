@@ -17,9 +17,16 @@ async function req(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${DJANGO}${path}`, {
-    method, headers, body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${DJANGO}${path}`, {
+      method, headers, body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error(
+      'Cannot reach the backend. Make sure all services are running (python dev.py), then refresh the page.'
+    );
+  }
   if (res.status === 401) { logout(); throw new Error('Session expired. Please log in again.'); }
   if (!res.ok) {
     let detail = res.statusText;

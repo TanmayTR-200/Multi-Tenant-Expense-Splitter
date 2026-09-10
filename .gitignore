@@ -19,3 +19,4 @@ dist/
 
 # Service logs created during local runs
 *.log
+*.png
