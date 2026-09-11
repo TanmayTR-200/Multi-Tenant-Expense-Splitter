@@ -118,13 +118,16 @@ Edge cases handled:
 - empty group / all-zero balances → no transfers
 - single member with a non-zero balance → no transfers (nothing to settle with)
 - **rounding**: all math is in integer cents from Django through FastAPI;
-  equal splits distribute remainder cents so `sum(splits) == amount` always
+  equal splits distribute remainder cents so `sum(splits) == amount` always,
+  and *which* members absorb the leftover cents rotates from one expense to
+  the next — so shares that are divisible in total come out exact (₹1000 +
+  ₹500 over 3 members is ₹500 each, not 500.01/500.00/499.99)
 
 ## Tests
 
 ```bash
-cd backend && python manage.py test api        # 16 tests: isolation, splits, members, auth
-cd settlement_service && python -m unittest test_settlement   # 5 tests: algorithm edge cases
+cd backend && python manage.py test api        # 19 tests: isolation, splits, members, auth, token claims
+cd settlement_service && python -m unittest test_settlement   # 6 tests: algorithm edge cases
 ```
 
 An end-to-end `smoke_test.ps1` exercise registers users, creates a group,

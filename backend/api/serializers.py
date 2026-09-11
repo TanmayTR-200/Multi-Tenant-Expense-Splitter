@@ -1,6 +1,18 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import Expense, ExpenseSplit, Group
+
+
+class UsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Login tokens carry the username claim so the UI can show who is
+    logged in without a second API round-trip."""
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['username'] = user.username
+        return token
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -68,14 +80,21 @@ class ExpenseSerializer(serializers.ModelSerializer):
         splits = validated_data.pop('splits', None)
         amount = validated_data['amount_cents']
         if not splits:
-            # Default: split equally among all members, remainder cents
-            # distributed to the first members so totals always balance.
+            # Default: split equally among all members. Remainder cents
+            # can't divide evenly, so rotate WHICH members absorb them
+            # from one expense to the next — otherwise the same (lowest
+            # id) members overpay by a cent on every expense and the
+            # bias accumulates, e.g. 1000 + 500 over 3 members would
+            # drift to shares of 500.01 / 500.00 / 499.99 instead of
+            # an exact 500 each.
             member_ids = sorted(group.memberships.values_list('user_id', flat=True))
             n = len(member_ids)
             base, rem = divmod(amount, n)
+            offset = group.expenses.count() % n
+            ordered = member_ids[offset:] + member_ids[:offset] if offset else member_ids
             splits = [
                 {'user_id': uid, 'amount_cents': base + (1 if i < rem else 0)}
-                for i, uid in enumerate(member_ids)
+                for i, uid in enumerate(ordered)
             ]
         # The payer is always the authenticated user — never client-controlled.
         expense = Expense.objects.create(

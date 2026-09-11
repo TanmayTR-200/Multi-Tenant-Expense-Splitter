@@ -31,6 +31,13 @@ class TestMinimumCashFlow(unittest.TestCase):
             )
             self.assertEqual(net, {1: 60, 2: -40, 3: -20}[uid])
 
+    def test_chain_nets_to_single_transfer(self):
+        # "A owes B 100, B owes C 100" nets to ONE transfer: A -> C 100.
+        result = minimum_cash_flow({1: -100, 2: 0, 3: 100})
+        self.assertEqual(
+            result, [{'from': 1, 'to': 3, 'amount_cents': 100}]
+        )
+
     def test_rounding_cents(self):
         # 100 cents split 3 ways in Django leaves 34/33/33; balances sum to 0.
         result = minimum_cash_flow({1: 34, 2: -17, 3: -17})

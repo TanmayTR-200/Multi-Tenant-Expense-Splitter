@@ -32,8 +32,13 @@ def register(request):
         username=data['username'], email=data['email'], password=data['password']
     )
     refresh = RefreshToken.for_user(user)
+    # Same claim the login serializer adds, so tokens from either
+    # endpoint let the UI display the logged-in username.
+    refresh['username'] = user.username
+    access = refresh.access_token
+    access['username'] = user.username
     return Response(
-        {'access': str(refresh.access_token), 'refresh': str(refresh)},
+        {'access': str(access), 'refresh': str(refresh)},
         status=status.HTTP_201_CREATED,
     )
 

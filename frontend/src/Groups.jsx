@@ -1,12 +1,12 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { api, fmt, getToken } from './api';
+import { api, fmt, currentUsername } from './api';
 
 export default function Groups({ onOpen }) {
   const [groups, setGroups] = useState([]);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
-  const user = getToken() ? decodeJwtUsername(getToken()) : null;
+  const user = currentUsername();
 
   const load = () => api.groups().then(setGroups).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -51,11 +51,3 @@ export default function Groups({ onOpen }) {
   );
 }
 
-function decodeJwtUsername(token) {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.username || payload.sub || '';
-  } catch {
-    return '';
-  }
-}

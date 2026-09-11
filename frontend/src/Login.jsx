@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
-import { api, setTokens } from './api';
+import { api, setTokens, setUsername } from './api';
 
 export default function Login({ onLogin }) {
   const [mode, setMode] = useState('login');
@@ -22,6 +22,7 @@ export default function Login({ onLogin }) {
       } else {
         await api.login(form.username, form.password);
       }
+      setUsername(form.username.trim());
       onLogin();
     } catch (err) {
       setError(err.message || 'Something went wrong — please try again.');

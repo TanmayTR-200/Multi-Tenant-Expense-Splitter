@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { api, logout, getToken } from './api';
+import { logout, currentUsername } from './api';
 import Login from './Login';
 import Groups from './Groups';
 import GroupDetail from './GroupDetail';
@@ -9,16 +9,7 @@ export default function App() {
   const [authed, setAuthed] = useState(!!localStorage.getItem('access_token'));
   const [loading, setLoading] = useState(true);
   const [groupId, setGroupId] = useState(null);
-  const user = getToken() ? decodeJwtUsername(getToken()) : null;
-
-  function decodeJwtUsername(token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.username || payload.sub || '';
-    } catch {
-      return '';
-    }
-  }
+  const user = currentUsername();
 
   useEffect(() => {
     let cancelled = false;

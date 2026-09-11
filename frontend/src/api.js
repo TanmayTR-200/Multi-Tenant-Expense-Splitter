@@ -9,8 +9,27 @@ export function setTokens(access) {
   localStorage.setItem('access_token', access);
 }
 
+export function setUsername(username) {
+  if (username) localStorage.setItem('username', username);
+}
+
+export function currentUsername() {
+  const stored = localStorage.getItem('username');
+  if (stored) return stored;
+  const token = getToken();
+  if (!token) return '';
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
+    return payload.username || '';
+  } catch {
+    return '';
+  }
+}
+
 export function logout() {
   localStorage.removeItem('access_token');
+  localStorage.removeItem('username');
 }
 
 async function req(path, { method = 'GET', body } = {}) {

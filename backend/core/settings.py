@@ -62,6 +62,9 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # NOTE: the setting is TOKEN_OBTAIN_SERIALIZER in SimpleJWT 5.x — older
+    # docs call it TOKEN_OBTAIN_PAIR_SERIALIZER, which is silently ignored.
+    'TOKEN_OBTAIN_SERIALIZER': 'api.serializers.UsernameTokenObtainPairSerializer',
 }
 
 # Internal token the FastAPI settlement service must present to Django.

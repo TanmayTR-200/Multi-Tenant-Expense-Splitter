@@ -4,6 +4,9 @@ End-to-end API tests covering the graded core: tenant isolation and
 
 Run with:  python manage.py test api
 """
+import base64
+import json
+
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -24,6 +27,36 @@ class Base(APITestCase):
         self.group = Group.objects.create(name='Trip', created_by=self.alice)
         Membership.objects.create(group=self.group, user=self.alice)
         Membership.objects.create(group=self.group, user=self.bob)
+
+
+class TokenClaimTests(APITestCase):
+    """Both auth endpoints must issue tokens carrying the username claim
+    the UI displays; otherwise the logged-in user is invisible."""
+
+    @staticmethod
+    def token_claims(access_token):
+        payload = access_token.split('.')[1]
+        payload += '=' * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload))
+
+    def test_register_token_contains_username(self):
+        res = self.client.post(
+            '/api/auth/register/',
+            {'username': 'alice', 'email': 'a@x.com', 'password': 'password123'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(self.token_claims(res.json()['access'])['username'], 'alice')
+
+    def test_login_token_contains_username(self):
+        User.objects.create_user('bob', 'b@x.com', 'password123')
+        res = self.client.post(
+            '/api/auth/login/',
+            {'username': 'bob', 'password': 'password123'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.token_claims(res.json()['access'])['username'], 'bob')
 
 
 class TenantIsolationTests(Base):
@@ -93,6 +126,28 @@ class ExpenseTests(Base):
             ExpenseSplit.objects.values_list('user__username', 'amount_cents')
         )
         self.assertEqual(splits, [('alice', 34), ('bob', 33), ('mallory', 33)])
+
+    def test_remainder_cents_rotate_between_expenses(self):
+        # The user-visible invariant: leftover cents must not pile onto the
+        # same member on every expense. 1000 + 500 split over 3 members is
+        # exactly 500 each; the naive "first members absorb the remainder"
+        # split drifts to shares of 500.01 / 500.00 / 499.99.
+        Membership.objects.create(group=self.group, user=self.mallory)
+        self.client.post(
+            f'/api/groups/{self.group.id}/',
+            {'description': 'A pays 1000', 'amount_cents': 100000},
+            format='json', **auth(self.alice),
+        )
+        self.client.post(
+            f'/api/groups/{self.group.id}/',
+            {'description': 'B pays 500', 'amount_cents': 50000},
+            format='json', **auth(self.bob),
+        )
+        res = self.client.get(f'/api/groups/{self.group.id}/', **auth(self.alice))
+        balances = {b['username']: b['balance_cents'] for b in res.json()['balances']}
+        self.assertEqual(
+            balances, {'alice': 50000, 'bob': 0, 'mallory': -50000}
+        )
 
     def test_explicit_split_must_sum_to_amount(self):
         res = self.client.post(
