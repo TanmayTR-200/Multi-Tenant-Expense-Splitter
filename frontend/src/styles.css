@@ -72,5 +72,14 @@ button.ghost {
   .loader {
     font-size: 15px; color: #6b7686; padding: 40px 0; text-align: center;
   }
+.user-chip {
+    margin-left: auto; font-size: 0.85rem; background: #e8f0fe; color: #1a4d8f;
+    padding: 4px 12px; border-radius: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .welcome { margin: 0 0 12px; color: #1c2430; font-size: 13.5px; }
+  .you { color: #1a4d8f; font-weight: 500; }
+  .loader { font-size: 15px; color: #6b7686; padding: 40px 0; text-align: center; }
+  .center { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+
 
 .matches li:hover { background: #f0f4ff; }
