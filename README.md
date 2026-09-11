@@ -123,7 +123,7 @@ Edge cases handled:
 ## Tests
 
 ```bash
-cd backend && python manage.py test api        # 13 tests: isolation, splits, members
+cd backend && python manage.py test api        # 16 tests: isolation, splits, members, auth
 cd settlement_service && python -m unittest test_settlement   # 5 tests: algorithm edge cases
 ```
 
