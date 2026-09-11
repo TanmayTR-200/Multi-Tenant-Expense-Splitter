@@ -40,7 +40,8 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-wrap">
       <form className="card login-card" onSubmit={submit}>
-        <h1>💸 Expense Splitter</h1>
+        <div className="login-logo">💸</div>
+        <h1>Expense Splitter</h1>
         <p className="muted">{mode === 'login' ? 'Welcome back' : 'Create an account'}</p>
 
         <label className="field">

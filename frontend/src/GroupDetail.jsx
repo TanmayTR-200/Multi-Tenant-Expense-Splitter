@@ -1,6 +1,13 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { api, fmt } from './api';
+import Avatar from './Avatar';
+
+function balanceLabel(cents) {
+  if (cents > 0) return <span className="pill pos">gets back {fmt(cents)}</span>;
+  if (cents < 0) return <span className="pill neg">owes {fmt(-cents)}</span>;
+  return <span className="pill flat">settled up</span>;
+}
 
 export default function GroupDetail({ groupId, onBack }) {
   const [group, setGroup] = useState(null);
@@ -74,9 +81,14 @@ export default function GroupDetail({ groupId, onBack }) {
 
   return (
     <main className="content">
-      <button className="ghost" onClick={onBack}>← All groups</button>
+      <div className="row back-row">
+        <button className="ghost" onClick={onBack}>← All groups</button>
+      </div>
       <h2>{group.name}</h2>
-      <p className="muted">Created by {group.created_by}</p>
+      <div className="detail-meta">
+        <span className="muted small">Created by {group.created_by}</span>
+        <span className="chip">{group.members.length} member{group.members.length !== 1 ? 's' : ''}</span>
+      </div>
 
       {alone && (
         <div className="callout">
@@ -89,8 +101,11 @@ export default function GroupDetail({ groupId, onBack }) {
         <h3>Members</h3>
         <ul className="list">
           {group.members.map((m) => (
-            <li key={m.id} className="row spaced">
-              <span>{m.username}{m.username === group.created_by ? ' (creator)' : ''}</span>
+            <li key={m.id} className="balance-row">
+              <Avatar username={m.username} />
+              <span className="who">{m.username}
+                {m.username === group.created_by && <span className="badge">creator</span>}
+              </span>
             </li>
           ))}
         </ul>
@@ -133,25 +148,27 @@ export default function GroupDetail({ groupId, onBack }) {
         <h3>Balances</h3>
         <ul className="list">
           {group.balances.map((b) => (
-            <li key={b.user_id} className="row spaced">
-              <span>{b.username}</span>
-              <span className={b.balance_cents >= 0 ? 'pos' : 'neg'}>
-                {fmt(b.balance_cents)}
-              </span>
+            <li key={b.user_id} className="balance-row">
+              <Avatar username={b.username} />
+              <span className="who">{b.username}</span>
+              {balanceLabel(b.balance_cents)}
             </li>
           ))}
         </ul>
       </section>
 
       <form className="card row" onSubmit={addExpense}>
-        <input placeholder="Description" required value={desc}
+        <input placeholder="Description, e.g. Dinner" required value={desc}
           onChange={(e) => setDesc(e.target.value)} />
-        <input placeholder="Amount (e.g. 42.50)" required inputMode="decimal"
+        <input placeholder="Amount, e.g. 42.50" required inputMode="decimal"
           value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <button disabled={busy}>Add expense (split equally)</button>
+        <button disabled={busy}>Add expense</button>
       </form>
+      <p className="muted small" style={{ marginTop: -10, marginBottom: 14 }}>
+        Expenses split equally among all members.
+      </p>
       {noExpenses && (
-        <p className="muted">No expenses yet — add one above.</p>
+        <div className="empty">No expenses yet — add one above.</div>
       )}
 
       <section className="card">
@@ -163,13 +180,21 @@ export default function GroupDetail({ groupId, onBack }) {
         </div>
         <ul className="list">
           {group.expenses.map((x) => (
-            <li key={x.id}>
-              <div className="row spaced">
-                <span><strong>{x.description}</strong> <span className="muted">— paid by {x.paid_by.username}</span></span>
-                <span>{fmt(x.amount_cents)}</span>
-              </div>
-              <div className="muted small">
-                split: {x.splits.map((s) => `${s.username} ${fmt(s.amount_cents)}`).join(' · ')}
+            <li key={x.id} className="expense">
+              <Avatar username={x.paid_by.username} />
+              <div className="expense-main">
+                <div className="expense-top">
+                  <strong>{x.description}</strong>
+                  <span className="amount">{fmt(x.amount_cents)}</span>
+                </div>
+                <div className="muted small">paid by {x.paid_by.username}</div>
+                <div className="chips">
+                  {x.splits.map((s) => (
+                    <span key={s.user_id} className="chip">
+                      {s.username} {fmt(s.amount_cents)}
+                    </span>
+                  ))}
+                </div>
               </div>
             </li>
           ))}
@@ -177,18 +202,26 @@ export default function GroupDetail({ groupId, onBack }) {
       </section>
 
       {transfers && (
-        <section className="card">
+        <section className="card settle-card">
           <h3>Suggested payments</h3>
           <ul className="list">
             {transfers.map((t, i) => (
-              <li key={i} className="row spaced">
-                <span><strong>{t.from.username}</strong> pays <strong>{t.to.username}</strong></span>
-                <span className="pos">{fmt(t.amount_cents)}</span>
+              <li key={i} className="transfer">
+                <Avatar username={t.from.username} size="sm" />
+                <span className="who">{t.from.username}</span>
+                <span className="arrow">→</span>
+                <Avatar username={t.to.username} size="sm" />
+                <span className="who">{t.to.username}</span>
+                <span className="pill pos">pays {fmt(t.amount_cents)}</span>
               </li>
             ))}
-            {transfers.length === 0 && <li className="muted">
-              {noExpenses ? 'Add an expense first, then see who owes whom.' : 'All settled up 🎉'}
-            </li>}
+            {transfers.length === 0 && (
+              <li className="empty">
+                {noExpenses
+                  ? 'Add an expense first, then see who owes whom.'
+                  : 'All settled up 🎉'}
+              </li>
+            )}
           </ul>
         </section>
       )}

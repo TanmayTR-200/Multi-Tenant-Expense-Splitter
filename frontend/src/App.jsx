@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { logout, currentUsername } from './api';
+import Avatar from './Avatar';
 import Login from './Login';
 import Groups from './Groups';
 import GroupDetail from './GroupDetail';
@@ -40,8 +41,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand" onClick={() => setGroupId(null)}>💸 Expense Splitter</span>
-        {user && <span className="user-chip">{user}</span>}
+        <span className="brand" onClick={() => setGroupId(null)}>
+          <span className="brand-tile">💸</span> Expense Splitter
+        </span>
+        {user && (
+          <span className="user-chip">
+            <Avatar username={user} size="sm" />
+            <span>{user}</span>
+          </span>
+        )}
         <button className="ghost" onClick={() => { logout(); setAuthed(false); }}>
           Log out
         </button>

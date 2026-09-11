@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { api, fmt, currentUsername } from './api';
+import Avatar from './Avatar';
 
 export default function Groups({ onOpen }) {
   const [groups, setGroups] = useState([]);
@@ -28,26 +29,42 @@ export default function Groups({ onOpen }) {
       </div>
       <h2>Your groups</h2>
       <form className="row" onSubmit={create}>
-        <input placeholder="New group name" required value={name}
+        <input placeholder="New group name, e.g. Ski Trip 2026" required value={name}
           onChange={(e) => setName(e.target.value)} />
         <button>Create</button>
       </form>
       {error && <div className="error">{error}</div>}
       <ul className="list">
         {groups.map((g) => (
-          <li key={g.id} className="card row spaced" onClick={() => onOpen(g.id)}>
-            <div>
-              <strong>{g.name}</strong>
-              <div className="muted">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</div>
+          <li key={g.id} className="group-card" onClick={() => onOpen(g.id)}>
+            <div className="stack">
+              {g.members.slice(0, 4).map((m) => (
+                <Avatar key={m.id} username={m.username} size="sm" />
+              ))}
             </div>
-            <span className={g.your_balance_cents >= 0 ? 'pos' : 'neg'}>
-              {fmt(g.your_balance_cents)}
-            </span>
+            <div className="group-info">
+              <div className="group-title">{g.name}</div>
+              <div className="muted small">
+                {g.members.length} member{g.members.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+            {g.your_balance_cents === 0 ? (
+              <span className="pill flat">settled up</span>
+            ) : (
+              <span className={`pill ${g.your_balance_cents > 0 ? 'pos' : 'neg'}`}>
+                {g.your_balance_cents > 0 ? 'you get ' : 'you owe '}
+                {fmt(Math.abs(g.your_balance_cents))}
+              </span>
+            )}
+            <span className="chevron">›</span>
           </li>
         ))}
-        {groups.length === 0 && <li className="muted">No groups yet — create one above.</li>}
+        {groups.length === 0 && (
+          <li className="empty">
+            No groups yet. Create one above to start splitting expenses.
+          </li>
+        )}
       </ul>
     </main>
   );
 }
-
