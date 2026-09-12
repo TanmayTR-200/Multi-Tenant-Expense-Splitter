@@ -185,7 +185,8 @@ class ExpenseTests(Base):
         )
         self.assertEqual(res.status_code, 400)
 
-    def test_paid_by_is_always_authenticated_user(self):
+    def test_paid_by_defaults_to_authenticated_user(self):
+        # No paid_by in the payload -> the caller is the payer.
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'X', 'amount_cents': 100},
@@ -193,7 +194,37 @@ class ExpenseTests(Base):
         )
         self.assertEqual(res.status_code, 201)
         e = Expense.objects.first()
-        self.assertEqual(e.paid_by, self.bob)  # not alice, regardless of payload
+        self.assertEqual(e.paid_by, self.bob)
+
+    def test_paid_by_can_be_another_member(self):
+        # A member may record an expense paid by someone else IN the group
+        # (Splitwise-style), e.g. "B paid 500" while A is logged in.
+        res = self.client.post(
+            f'/api/groups/{self.group.id}/',
+            {'description': 'B paid this', 'amount_cents': 50000,
+             'paid_by': 'bob'},
+            format='json', **auth(self.alice),
+        )
+        self.assertEqual(res.status_code, 201)
+        e = Expense.objects.first()
+        self.assertEqual(e.paid_by, self.bob)
+
+    def test_paid_by_must_be_a_member(self):
+        # The payer resolves server-side to a member of this group; a
+        # non-member (or unknown) username is rejected.
+        res = self.client.post(
+            f'/api/groups/{self.group.id}/',
+            {'description': 'X', 'amount_cents': 100, 'paid_by': 'mallory'},
+            format='json', **auth(self.alice),
+        )
+        self.assertEqual(res.status_code, 400)
+        res = self.client.post(
+            f'/api/groups/{self.group.id}/',
+            {'description': 'X', 'amount_cents': 100, 'paid_by': 'ghost'},
+            format='json', **auth(self.alice),
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(Expense.objects.count(), 0)
 
     def test_balances_endpoint(self):
         # alice pays 100, split equally -> alice +50, bob -50

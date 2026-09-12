@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -48,11 +49,14 @@ class ExpenseSplitInputSerializer(serializers.Serializer):
 
 class ExpenseSerializer(serializers.ModelSerializer):
     splits = ExpenseSplitInputSerializer(many=True, required=False)
+    # Optional username of who paid, for recording on behalf of another
+    # member (Splitwise-style). Defaults to the authenticated user.
+    paid_by = serializers.CharField(required=False, write_only=True)
 
     class Meta:
         model = Expense
         fields = ['id', 'paid_by', 'description', 'amount_cents', 'created_at', 'splits']
-        read_only_fields = ['id', 'paid_by', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
     def validate(self, data):
         group = self.context['group']
@@ -72,12 +76,26 @@ class ExpenseSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'split amounts must sum to the expense amount'
                 )
+
+        # TENANT CHECK: a caller may record an expense paid by another
+        # member, but never by a non-member — the payer resolves server-side
+        # to a real User of THIS group, not to whatever the client sends.
+        payer_name = data.get('paid_by')
+        self.paid_by_user = None
+        if payer_name is not None:
+            payer = User.objects.filter(username=payer_name).first()
+            if payer is None or payer.id not in member_ids:
+                raise serializers.ValidationError(
+                    'paid_by must be a member of this group'
+                )
+            self.paid_by_user = payer
         return data
 
     def create(self, validated_data):
         group = self.context['group']
         request = self.context['request']
         splits = validated_data.pop('splits', None)
+        validated_data.pop('paid_by', None)
         amount = validated_data['amount_cents']
         if not splits:
             # Default: split equally among all members. Remainder cents
@@ -96,9 +114,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
                 {'user_id': uid, 'amount_cents': base + (1 if i < rem else 0)}
                 for i, uid in enumerate(ordered)
             ]
-        # The payer is always the authenticated user — never client-controlled.
+        # Payer: the member chosen on the form (validated above), else
+        # the authenticated user.
+        paid_by = getattr(self, 'paid_by_user', None) or request.user
         expense = Expense.objects.create(
-            group=group, paid_by=request.user,
+            group=group, paid_by=paid_by,
             description=validated_data['description'],
             amount_cents=amount,
         )

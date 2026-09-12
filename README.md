@@ -59,12 +59,15 @@ npm run dev        # http://localhost:5173
 ```
 
 ### Try it
-1. Register two accounts (e.g. `alice` and `bob`).
-2. Alice creates a group, then opens it and **adds Bob from the Members card** —
-   start typing Bob's username and pick him from the suggestions.
-3. Alice or Bob adds an expense — it is split **equally** among all members.
-   Every expense row shows who paid and each member's share.
-4. Press **See who owes whom** to view the minimal settlement.
+1. Register three accounts (e.g. `alice`, `bob`, `carol`).
+2. Alice creates a group, then opens it and **adds Bob and Carol from the
+   Members card** — start typing a username and pick from the suggestions.
+3. Alice adds an expense — pick **who paid** in the "Paid by" dropdown
+   (it defaults to you). Record `A paid ₹1000` (paid by Alice) and
+   `B paid ₹500` (paid by Bob) without ever logging out: expenses split
+   **equally** among all members, and each row shows the payer and shares.
+4. Press **See who owes whom** → exactly one transfer: **carol pays alice ₹500**
+   (A gets back 500, B is settled, C owes 500).
 
 ## API surface
 
@@ -75,7 +78,7 @@ npm run dev        # http://localhost:5173
 | GET  | `/api/groups/` | user JWT | groups the user belongs to |
 | POST | `/api/groups/` | user JWT | create a group |
 | GET  | `/api/groups/<id>/` | user JWT + membership | group + balances + expenses |
-| POST | `/api/groups/<id>/` | user JWT + membership | add expense; `paid_by` is always the caller |
+| POST | `/api/groups/<id>/` | user JWT + membership | add expense; `paid_by` defaults to the caller, may be any member |
 | POST | `/api/groups/<id>/members/` | user JWT + **creator** | add an existing user by `{"username": "bob"}` |
 | GET  | `/api/users/?q=bob` | user JWT | search registered usernames (member picker) |
 | GET  | `/api/internal/groups/<id>/` | user JWT + `X-Internal-Token` | settlement service only |
@@ -96,8 +99,9 @@ def _get_group_or_403(request, group_id):
 ```
 
 `ExpenseSerializer.validate` likewise re-checks that every split target is a
-member of the group, and `ExpenseSerializer.create` forces `paid_by` to the
-authenticated user — a client cannot charge someone else or split to outsiders.
+member of the group. The optional `paid_by` (who fronted the money) defaults
+to the authenticated user and, when sent, must resolve server-side to a
+member of this group — a client can never record an expense for an outsider.
 
 Because responses are a 404 for both "group doesn't exist" and "you're not in
 it", non-members can't even probe group existence.
@@ -126,7 +130,7 @@ Edge cases handled:
 ## Tests
 
 ```bash
-cd backend && python manage.py test api        # 19 tests: isolation, splits, members, auth, token claims
+cd backend && python manage.py test api        # 21 tests: isolation, splits, members, auth, token claims, payer rules
 cd settlement_service && python -m unittest test_settlement   # 6 tests: algorithm edge cases
 ```
 

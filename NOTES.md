@@ -13,8 +13,10 @@ injects `save()`'s kwargs into `validated_data` before calling `create()`, so
 `group` appeared twice. I figured it out by reading the DRF source path from the
 traceback (`serializer.save()` → `self.create.validated_data` update), and fixed it
 by pulling `group`/`request` from the serializer's `context` instead. This also
-turned out to be the right *security* shape: the payer and group are derived
-server-side, never from the request body.
+turned out to be the right *security* shape: the group and every referenced
+user (split targets, and the optional `paid_by`) are validated server-side
+against the group's membership — client input picks *which member*, but can
+never make an expense touch a non-member.
 
 ## 2. One place where I disagreed with or corrected an AI suggestion
 

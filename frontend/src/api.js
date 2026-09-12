@@ -80,9 +80,10 @@ export const api = {
       method: 'POST',
       body: { username },
     }),
-  addExpense: (groupId, description, amountCents, splits) => {
+  addExpense: (groupId, description, amountCents, splits, paidBy) => {
     const body = { description, amount_cents: amountCents };
     if (splits) body.splits = splits;
+    if (paidBy) body.paid_by = paidBy;
     return req(`/groups/${groupId}/`, { method: 'POST', body });
   },
   settle: async (groupId) => {

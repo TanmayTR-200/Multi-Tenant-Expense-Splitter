@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { api, fmt } from './api';
+import { api, fmt, currentUsername } from './api';
 import Avatar from './Avatar';
 
 function balanceLabel(cents) {
@@ -19,6 +19,8 @@ export default function GroupDetail({ groupId, onBack }) {
   const [memberQ, setMemberQ] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showMatches, setShowMatches] = useState(false);
+  const [payer, setPayer] = useState('');
+  const me = currentUsername();
 
   const load = () =>
     api.group(groupId)
@@ -46,9 +48,10 @@ export default function GroupDetail({ groupId, onBack }) {
     }
     setBusy(true);
     try {
-      // No splits sent: the API splits equally among all group members,
-      // and the payer is always the authenticated user (never client-chosen).
-      await api.addExpense(groupId, desc, Math.round(dollars * 100), null);
+      // No splits sent: the API splits equally among all group members.
+      // paid_by defaults to the logged-in user server-side; when we picked
+      // another member, the server re-validates that they belong to the group.
+      await api.addExpense(groupId, desc, Math.round(dollars * 100), null, payer);
       setDesc(''); setAmount('');
       await load();
     } catch (err) { setError(err.message); }
@@ -162,6 +165,15 @@ export default function GroupDetail({ groupId, onBack }) {
           onChange={(e) => setDesc(e.target.value)} />
         <input placeholder="Amount, e.g. 42.50" required inputMode="decimal"
           value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <select
+          aria-label="Paid by"
+          value={payer || me || group.members[0]?.username || ''}
+          onChange={(e) => setPayer(e.target.value)}
+        >
+          {group.members.map((m) => (
+            <option key={m.id} value={m.username}>Paid by {m.username}</option>
+          ))}
+        </select>
         <button disabled={busy}>Add expense</button>
       </form>
       <p className="muted small" style={{ marginTop: -10, marginBottom: 14 }}>
