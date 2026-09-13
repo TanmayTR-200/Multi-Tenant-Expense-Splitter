@@ -2,25 +2,13 @@
 
 ## 1. One thing I didn't know before this project and how I figured it out
 
-I didn't know that Django can run *old* code without telling me.
-
-I added a delete button to the dashboard. The code was correct, but the button never showed up, and the API response was missing the new field I had just written.
-
-How I figured it out: I compared what the running server actually returned with what my code said it should return. They didn't match — so the server was running old code. The cause: `dev.py` starts Django with `--noreload`, which turns off auto-reload, so code changes only appear after a restart. I restarted the server and the button appeared. I also added a note about this to the README so nobody trips on it again.
-
-Lesson: when the UI disagrees with code I just wrote, I check the running server before I check the code.
-
-One more thing I learned along the way: Django tests never touch my real database. They build a throwaway in-memory copy, run the fake users (`alice`, `bob`) inside it, and wipe it when tests end. That's why the fake names in `tests.py` never show up in my real data.
+This was my first time working with Django — I'd used FastAPI and Express before, but not Django. Early on I hit something that confused me: I added a delete button and a new API field, but the button never showed up and the response was missing the field, even though the code looked right. I compared what the server was actually sending against what my code said it should send, and they didn't match — so the server wasn't running what I'd written at all. Turned out dev.py starts Django with --noreload, so code changes only apply after a restart. Restarting fixed it, and I added a note to the README about it. Small thing, but it taught me not to trust that "the code is correct" means "the server is running that code".
 
 ## 2. One place where I disagreed with or corrected an AI suggestion
 
-The AI suggested protecting the internal endpoint (the one that gives the settlement service group data) with just one shared secret token.
+The AI's original equal-split logic always gave leftover cents to the same members every time — specifically whoever had the lowest user ID. That seemed fine at first, but I realized it wasn't: if the same people always absorb the extra cent, their balance drifts a tiny bit every single expense. Over enough expenses, it adds up to a real, visible error — I found a case where ₹1000 + ₹500 split three ways came out to ₹500.01 / ₹500.00 / ₹499.99 instead of an exact ₹500 each, and the settlement screen showed someone owed ₹499.99 instead of ₹500.
 
-I disagreed. With only a shared token, anyone holding it could fetch *any* group's data for *any* user — that breaks the tenant isolation this whole project is built around.
-
-My fix: the endpoint now requires **both** — the shared token (proves the request came from our own settlement service) **and** a valid user token that is re-checked against group membership (proves this user is allowed to see this group). So a user can only settle groups they're actually in. The endpoint also returns 404 for both "no such group" and "not your group", so nobody can even discover which groups exist.
-
-A second one is more personal: the AI pushed hard to keep the test suite, and I wanted to delete `tests.py` ("it already works, why test again?"). I kept it in the end, because the tests check security rules I would never manually re-test every time — only the creator can delete a group (403 for other members, 404 for strangers, 401 with no login).
+I disagreed with leaving it that way, since it looked correct on any single expense but was quietly wrong over time. My fix: instead of always giving the extra cent to the same members, rotate who absorbs it based on how many expenses the group already has (expense count % number of members). So the bias doesn't build up in one direction — it spreads out and evens back to exact amounts.
 
 ## 3. One thing I'd do differently with more time
 
