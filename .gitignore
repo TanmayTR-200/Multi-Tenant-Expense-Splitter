@@ -15,7 +15,6 @@ dist/
 .vscode/
 .idea/
 .DS_Store
-.codely-cli/
 
 # Service logs created during local runs
 *.log
