@@ -8,6 +8,23 @@ A simplified Splitwise with strict tenant isolation, built as three services:
 | `settlement_service/` | FastAPI | 8001 | Fetches group data from Django, computes minimum transfers |
 | `frontend/` | React (Vite) | 5173 | Login, groups/expenses UI, settlement summary |
 
+## Features
+
+- **JWT auth** — register/login, simplejwt access + refresh tokens
+- **Strict tenant isolation** — every group lookup re-derives membership from the
+  caller's token server-side; non-members get a 404 indistinguishable from
+  "doesn't exist"
+- **Equal-split expenses** — remainder cents rotate between expenses so
+  `sum(splits) == amount` always
+- **"Who paid" per expense** — `paid_by` defaults to you, may be any member,
+  validated server-side
+- **Creator-only group deletion** — 🗑 on the dashboard card, confirmed in the
+  UI, re-enforced server-side (403 for non-creators); cascades to expenses and
+  splits
+- **Minimum-transfer settlement** — FastAPI greedy algorithm, at most `n-1`
+  transfers, integer cents end to end
+- **All money rendered as ₹ (INR)**
+
 ## How to run
 
 **Prereqs:** Python 3.11+, Node 18+.
@@ -24,6 +41,10 @@ React frontend (5173) as **background processes in the single terminal**,
 merges their logs with `[django]` / `[settle]` / `[vite]` prefixes, and
 `Ctrl+C` stops all of them. Skip anything you don't need with
 `python dev.py --no-frontend` (also `--no-backend`, `--no-settle`).
+
+> **Note:** `dev.py` starts Django with `--noreload`, so restart `python dev.py`
+> after editing backend code. (Running `python manage.py runserver` directly
+> auto-reloads as usual.)
 
 Windows alternative that opens each service in its **own window**:
 double-click `start_dev.bat` (or run it from the terminal). Close each
@@ -68,6 +89,9 @@ npm run dev        # http://localhost:5173
    **equally** among all members, and each row shows the payer and shares.
 4. Press **See who owes whom** → exactly one transfer: **carol pays alice ₹500**
    (A gets back 500, B is settled, C owes 500).
+5. As the group's **creator**, use the **🗑** button on the far right of its
+   dashboard card to delete it. Members see no button — and the API re-checks
+   anyway (a non-creator `DELETE` gets a 403, a non-member a 404).
 
 ## API surface
 
@@ -75,10 +99,11 @@ npm run dev        # http://localhost:5173
 |--------|------|------|-------|
 | POST | `/api/auth/register/` | public | returns access + refresh tokens |
 | POST | `/api/auth/login/` | public | simplejwt token pair |
-| GET  | `/api/groups/` | user JWT | groups the user belongs to |
+| GET  | `/api/groups/` | user JWT | groups the user belongs to (each with `is_creator`) |
 | POST | `/api/groups/` | user JWT | create a group |
 | GET  | `/api/groups/<id>/` | user JWT + membership | group + balances + expenses |
 | POST | `/api/groups/<id>/` | user JWT + membership | add expense; `paid_by` defaults to the caller, may be any member |
+| DEL  | `/api/groups/<id>/` | user JWT + **creator** | delete the group (and its expenses) |
 | POST | `/api/groups/<id>/members/` | user JWT + **creator** | add an existing user by `{"username": "bob"}` |
 | GET  | `/api/users/?q=bob` | user JWT | search registered usernames (member picker) |
 | GET  | `/api/internal/groups/<id>/` | user JWT + `X-Internal-Token` | settlement service only |
@@ -130,9 +155,14 @@ Edge cases handled:
 ## Tests
 
 ```bash
-cd backend && python manage.py test api        # 21 tests: isolation, splits, members, auth, token claims, payer rules
+cd backend && python manage.py test api        # 26 tests: isolation, splits, members, auth, token claims, payer rules, delete
 cd settlement_service && python -m unittest test_settlement   # 6 tests: algorithm edge cases
 ```
 
 An end-to-end `smoke_test.ps1` exercise registers users, creates a group,
 adds members, adds expenses, and verifies the settlement response.
+
+## Submission notes
+
+See [NOTES.md](NOTES.md) for what I learned building this, where I overruled
+(or got overruled by) the AI, and what I'd do differently with more time.

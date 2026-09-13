@@ -174,6 +174,38 @@ input:focus, select:focus {
 .group-card .pill { margin-left: auto; }
 .group-card .pill + .chevron { margin-left: 4px; }
 
+/* Delete button on group cards: a subtle ghost control on the far right
+   that turns into a danger action on hover. */
+.group-card .delete {
+  flex: none;
+  margin-left: 6px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  transform: none;
+  box-shadow: none;
+}
+.group-card .delete:hover {
+  color: var(--neg);
+  opacity: 1;
+  background: var(--neg-bg);
+  transform: none;
+  box-shadow: none;
+}
+.group-card .delete:focus-visible {
+  outline: 2px solid var(--neg);
+  outline-offset: 2px;
+}
+
 /* ---------- Empty states ---------- */
 .empty {
   border: 1.5px dashed var(--border-strong); border-radius: var(--radius);

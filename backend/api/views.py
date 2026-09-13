@@ -106,7 +106,7 @@ def search_users(request):
     return Response([{'id': u.id, 'username': u.username} for u in users])
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([permissions.IsAuthenticated])
 def group_detail(request, group_id):
     group = _get_group_or_403(request, group_id)
@@ -142,6 +142,17 @@ def group_detail(request, group_id):
             ],
             'expenses': expenses,
         })
+
+    if request.method == 'DELETE':
+        # Only the creator may delete the group. Memberships, expenses and
+        # their splits are removed by the model's on_delete=CASCADE.
+        if group.created_by_id != request.user.id:
+            return Response(
+                {'detail': 'only the group creator can delete the group'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        group.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # POST: add expense. paid_by is always the authenticated user.
     ser = ExpenseSerializer(data=request.data, context={'group': group, 'request': request})

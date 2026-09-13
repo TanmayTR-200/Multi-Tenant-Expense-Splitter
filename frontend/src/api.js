@@ -74,6 +74,7 @@ export const api = {
   groups: () => req('/groups/'),
   createGroup: (name) => req('/groups/', { method: 'POST', body: { name } }),
   group: (id) => req(`/groups/${id}/`),
+  deleteGroup: (groupId) => req(`/groups/${groupId}/`, { method: 'DELETE' }),
   searchUsers: (q) => req(`/users/?q=${encodeURIComponent(q.trim())}`),
   addMember: (groupId, username) =>
     req(`/groups/${groupId}/members/`, {
@@ -104,4 +105,4 @@ export const api = {
 };
 
 export const fmt = (cents) =>
-  (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  (cents / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });

@@ -244,6 +244,43 @@ class ExpenseTests(Base):
         res = self.client.get(f'/api/groups/{self.group.id}/', **auth(self.bob))
         self.assertFalse(res.json()['is_creator'])
 
+    def test_list_includes_is_creator(self):
+        # The dashboard needs to know which rows show a delete button.
+        res = self.client.get('/api/groups/', **auth(self.alice))
+        g = next(x for x in res.json() if x['id'] == self.group.id)
+        self.assertTrue(g['is_creator'])
+        res = self.client.get('/api/groups/', **auth(self.bob))
+        g = next(x for x in res.json() if x['id'] == self.group.id)
+        self.assertFalse(g['is_creator'])
+
+    def test_creator_can_delete_group(self):
+        # Deleting cascades through Membership (CASCADE) and via the DB-level
+        # CASCADE on Expense / ExpenseSplit, so no orphans remain.
+        gid = self.group.id
+        res = self.client.delete(f'/api/groups/{gid}/', **auth(self.alice))
+        self.assertEqual(res.status_code, 204)
+        self.assertFalse(Group.objects.filter(id=gid).exists())
+        self.assertFalse(Membership.objects.filter(group_id=gid).exists())
+        # And it vanishes from the member's list too.
+        res = self.client.get('/api/groups/', **auth(self.bob))
+        self.assertEqual([g['id'] for g in res.json()], [])
+
+    def test_non_member_cannot_delete_group(self):
+        res = self.client.delete(f'/api/groups/{self.group.id}/', **auth(self.mallory))
+        # Tenant isolation: a non-member can't even probe a group's existence.
+        self.assertEqual(res.status_code, 404)
+        self.assertTrue(Group.objects.filter(id=self.group.id).exists())
+
+    def test_non_creator_member_cannot_delete_group(self):
+        res = self.client.delete(f'/api/groups/{self.group.id}/', **auth(self.bob))
+        self.assertEqual(res.status_code, 403)
+        self.assertTrue(Group.objects.filter(id=self.group.id).exists())
+
+    def test_delete_requires_auth(self):
+        res = self.client.delete(f'/api/groups/{self.group.id}/')
+        self.assertEqual(res.status_code, 401)
+        self.assertTrue(Group.objects.filter(id=self.group.id).exists())
+
     def test_search_users(self):
         res = self.client.get('/api/users/?q=ali', **auth(self.bob))
         self.assertEqual([u['username'] for u in res.json()], ['alice'])

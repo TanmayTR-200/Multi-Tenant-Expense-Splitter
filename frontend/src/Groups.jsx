@@ -7,6 +7,7 @@ export default function Groups({ onOpen }) {
   const [groups, setGroups] = useState([]);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
   const user = currentUsername();
 
   const load = () => api.groups().then(setGroups).catch((e) => setError(e.message));
@@ -20,6 +21,21 @@ export default function Groups({ onOpen }) {
       setName('');
       load();
     } catch (err) { setError(err.message); }
+  };
+
+  const del = async (e, g) => {
+    e.stopPropagation();
+    if (deletingId !== null) return;
+    if (!window.confirm(
+      `Delete "${g.name}"? This removes the group and all its expenses, and can't be undone.`
+    )) return;
+    setDeletingId(g.id);
+    setError('');
+    try {
+      await api.deleteGroup(g.id);
+      load();
+    } catch (err) { setError(err.message); }
+    finally { setDeletingId(null); }
   };
 
   return (
@@ -57,6 +73,17 @@ export default function Groups({ onOpen }) {
               </span>
             )}
             <span className="chevron">›</span>
+            {g.is_creator && (
+              <button
+                className="delete"
+                aria-label={`Delete ${g.name}`}
+                title="Delete group"
+                disabled={deletingId === g.id}
+                onClick={(e) => del(e, g)}
+              >
+                {deletingId === g.id ? '…' : '🗑'}
+              </button>
+            )}
           </li>
         ))}
         {groups.length === 0 && (

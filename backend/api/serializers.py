@@ -25,10 +25,11 @@ class RegisterSerializer(serializers.Serializer):
 class GroupSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     your_balance_cents = serializers.SerializerMethodField()
+    is_creator = serializers.SerializerMethodField()
 
     class Meta:
         model = Group
-        fields = ['id', 'name', 'members', 'your_balance_cents', 'created_at']
+        fields = ['id', 'name', 'members', 'your_balance_cents', 'is_creator', 'created_at']
 
     def get_members(self, obj):
         return [
@@ -40,6 +41,12 @@ class GroupSerializer(serializers.ModelSerializer):
         from .balance import group_net_for_user
         request = self.context.get('request')
         return group_net_for_user(request.user, obj)
+
+    def get_is_creator(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        return obj.created_by_id == request.user.id
 
 
 class ExpenseSplitInputSerializer(serializers.Serializer):
