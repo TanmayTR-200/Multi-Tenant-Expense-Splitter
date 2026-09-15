@@ -16,9 +16,6 @@ export default function App() {
     let cancelled = false;
     const tryStart = async () => {
       if (cancelled) return;
-      // Small guard so the Django runserver has time to bind its port;
-      // this prevents the startup race where the frontend fires
-      // /groups/<id>/ requests before Django is listening.
       await new Promise((r) => setTimeout(r, 250));
       setLoading(false);
     };

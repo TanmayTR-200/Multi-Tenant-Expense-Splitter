@@ -26,7 +26,6 @@ class Expense(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses_paid'
     )
     description = models.CharField(max_length=300)
-    # All money is stored as integer cents to avoid float rounding errors.
     amount_cents = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 

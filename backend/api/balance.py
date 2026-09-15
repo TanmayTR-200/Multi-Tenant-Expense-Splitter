@@ -15,7 +15,7 @@ def compute_user_balances(group):
     """
     balances = defaultdict(int)
     for m in group.memberships.select_related('user'):
-        balances[m.user_id] += 0  # ensure every member appears
+        balances[m.user_id] += 0
 
     for expense in group.expenses.all():
         balances[expense.paid_by_id] += expense.amount_cents

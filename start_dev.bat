@@ -1,7 +1,5 @@
 @echo off
 title Expense Splitter — one-command launcher
-rem Opens all three services in their own window.
-rem Run this file (double-click or from the terminal).
 
 echo Starting Django API...
 start "Django API (8000)" cmd /k "cd /d %~dp0backend && python manage.py runserver 127.0.0.1:8000"

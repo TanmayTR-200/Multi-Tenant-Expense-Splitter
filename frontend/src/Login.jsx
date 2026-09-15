@@ -15,8 +15,6 @@ export default function Login({ onLogin }) {
     try {
       if (mode === 'register') {
         setInfo('Creating account…');
-        // The register endpoint already returns JWTs — use them directly
-        // instead of making a second round-trip to /auth/login/.
         const r = await api.register(form.username, form.email, form.password);
         setTokens(r.access);
       } else {

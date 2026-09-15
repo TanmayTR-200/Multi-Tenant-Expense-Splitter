@@ -16,9 +16,8 @@ def minimum_cash_flow(balances_cents: dict) -> list:
       - single member (who somehow has a non-zero balance) -> []
       - float-free: everything in integer cents; totals always balance
     """
-    # Filter out rounding dust and zero balances.
-    debtors = deque()   # negative balances: (user_id, amount_owed)
-    creditors = deque()  # positive balances: (user_id, amount_owed_to)
+    debtors = deque()
+    creditors = deque()
     for uid, bal in balances_cents.items():
         if bal < 0:
             debtors.append([uid, -bal])

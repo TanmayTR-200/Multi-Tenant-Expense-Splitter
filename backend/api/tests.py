@@ -92,20 +92,17 @@ class TenantIsolationTests(Base):
             (settings.SECRET_KEY + ':settlement-service').encode()
         ).hexdigest()
 
-        # Mallory's JWT + valid internal token -> still 404 (not a member).
         h = auth(self.mallory)
         h['HTTP_X_INTERNAL_TOKEN'] = internal
         res = self.client.get(f'/api/groups/{self.group.id}/settlement-data/', **h)
         self.assertEqual(res.status_code, 404)
 
-        # Member JWT + valid internal token -> 200 with balances.
         h = auth(self.alice)
         h['HTTP_X_INTERNAL_TOKEN'] = internal
         res = self.client.get(f'/api/groups/{self.group.id}/settlement-data/', **h)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.json()['members']), 2)
 
-        # Member JWT but WRONG internal token -> 403 (service not trusted).
         h = auth(self.alice)
         h['HTTP_X_INTERNAL_TOKEN'] = 'wrong'
         res = self.client.get(f'/api/groups/{self.group.id}/settlement-data/', **h)
@@ -114,7 +111,6 @@ class TenantIsolationTests(Base):
 
 class ExpenseTests(Base):
     def test_equal_split_with_remainder(self):
-        # 100 cents / 3 members -> 34 + 33 + 33, always sums exactly.
         Membership.objects.create(group=self.group, user=self.mallory)
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
@@ -128,10 +124,6 @@ class ExpenseTests(Base):
         self.assertEqual(splits, [('alice', 34), ('bob', 33), ('mallory', 33)])
 
     def test_remainder_cents_rotate_between_expenses(self):
-        # The user-visible invariant: leftover cents must not pile onto the
-        # same member on every expense. 1000 + 500 split over 3 members is
-        # exactly 500 each; the naive "first members absorb the remainder"
-        # split drifts to shares of 500.01 / 500.00 / 499.99.
         Membership.objects.create(group=self.group, user=self.mallory)
         self.client.post(
             f'/api/groups/{self.group.id}/',
@@ -175,8 +167,6 @@ class ExpenseTests(Base):
         self.assertEqual(self.group.memberships.count(), 3)
 
     def test_split_target_must_be_group_member(self):
-        # Mallory is NOT a member here (only alice+bob are); even though the
-        # request is authenticated as alice, splitting to mallory is rejected.
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'X', 'amount_cents': 100,
@@ -186,7 +176,6 @@ class ExpenseTests(Base):
         self.assertEqual(res.status_code, 400)
 
     def test_paid_by_defaults_to_authenticated_user(self):
-        # No paid_by in the payload -> the caller is the payer.
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'X', 'amount_cents': 100},
@@ -197,8 +186,6 @@ class ExpenseTests(Base):
         self.assertEqual(e.paid_by, self.bob)
 
     def test_paid_by_can_be_another_member(self):
-        # A member may record an expense paid by someone else IN the group
-        # (Splitwise-style), e.g. "B paid 500" while A is logged in.
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'B paid this', 'amount_cents': 50000,
@@ -210,8 +197,6 @@ class ExpenseTests(Base):
         self.assertEqual(e.paid_by, self.bob)
 
     def test_paid_by_must_be_a_member(self):
-        # The payer resolves server-side to a member of this group; a
-        # non-member (or unknown) username is rejected.
         res = self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'X', 'amount_cents': 100, 'paid_by': 'mallory'},
@@ -227,7 +212,6 @@ class ExpenseTests(Base):
         self.assertEqual(Expense.objects.count(), 0)
 
     def test_balances_endpoint(self):
-        # alice pays 100, split equally -> alice +50, bob -50
         self.client.post(
             f'/api/groups/{self.group.id}/',
             {'description': 'X', 'amount_cents': 100},
@@ -245,7 +229,6 @@ class ExpenseTests(Base):
         self.assertFalse(res.json()['is_creator'])
 
     def test_list_includes_is_creator(self):
-        # The dashboard needs to know which rows show a delete button.
         res = self.client.get('/api/groups/', **auth(self.alice))
         g = next(x for x in res.json() if x['id'] == self.group.id)
         self.assertTrue(g['is_creator'])
@@ -254,20 +237,16 @@ class ExpenseTests(Base):
         self.assertFalse(g['is_creator'])
 
     def test_creator_can_delete_group(self):
-        # Deleting cascades through Membership (CASCADE) and via the DB-level
-        # CASCADE on Expense / ExpenseSplit, so no orphans remain.
         gid = self.group.id
         res = self.client.delete(f'/api/groups/{gid}/', **auth(self.alice))
         self.assertEqual(res.status_code, 204)
         self.assertFalse(Group.objects.filter(id=gid).exists())
         self.assertFalse(Membership.objects.filter(group_id=gid).exists())
-        # And it vanishes from the member's list too.
         res = self.client.get('/api/groups/', **auth(self.bob))
         self.assertEqual([g['id'] for g in res.json()], [])
 
     def test_non_member_cannot_delete_group(self):
         res = self.client.delete(f'/api/groups/{self.group.id}/', **auth(self.mallory))
-        # Tenant isolation: a non-member can't even probe a group's existence.
         self.assertEqual(res.status_code, 404)
         self.assertTrue(Group.objects.filter(id=self.group.id).exists())
 

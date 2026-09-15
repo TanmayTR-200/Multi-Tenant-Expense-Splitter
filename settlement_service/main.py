@@ -19,8 +19,6 @@ app.add_middleware(
 )
 
 DJANGO_URL = os.environ.get('DJANGO_URL', 'http://127.0.0.1:8000')
-# Must match core.settings.INTERNAL_SERVICE_TOKEN:
-#   sha256(DJANGO_SECRET_KEY + ':settlement-service')
 DJANGO_SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-in-production'
 )
@@ -28,7 +26,7 @@ INTERNAL_TOKEN = hashlib.sha256(
     (DJANGO_SECRET_KEY + ':settlement-service').encode()
 ).hexdigest()
 
-JWT_SECRET = DJANGO_SECRET_KEY  # simplejwt signs access tokens with SECRET_KEY
+JWT_SECRET = DJANGO_SECRET_KEY
 JWT_ALG = 'HS256'
 
 
@@ -88,8 +86,6 @@ def settle(req: SettleRequest, request: Request):
         raise HTTPException(status_code=503, detail='core API unavailable')
 
     if resp.status_code == 404:
-        # Group doesn't exist, or user is not a member — same response either
-        # way so we don't leak group existence.
         raise HTTPException(status_code=404, detail='group not found')
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail=f'core API error: {resp.status_code}')

@@ -32,8 +32,6 @@ def register(request):
         username=data['username'], email=data['email'], password=data['password']
     )
     refresh = RefreshToken.for_user(user)
-    # Same claim the login serializer adds, so tokens from either
-    # endpoint let the UI display the logged-in username.
     refresh['username'] = user.username
     access = refresh.access_token
     access['username'] = user.username
@@ -144,8 +142,6 @@ def group_detail(request, group_id):
         })
 
     if request.method == 'DELETE':
-        # Only the creator may delete the group. Memberships, expenses and
-        # their splits are removed by the model's on_delete=CASCADE.
         if group.created_by_id != request.user.id:
             return Response(
                 {'detail': 'only the group creator can delete the group'},
@@ -154,7 +150,6 @@ def group_detail(request, group_id):
         group.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # POST: add expense. paid_by is always the authenticated user.
     ser = ExpenseSerializer(data=request.data, context={'group': group, 'request': request})
     ser.is_valid(raise_exception=True)
     expense = ser.save()
@@ -177,8 +172,6 @@ def internal_group_data(request, group_id):
     if not token or not hmac.compare_digest(token, settings.INTERNAL_SERVICE_TOKEN):
         return Response({'detail': 'forbidden'}, status=403)
 
-    # TENANT ISOLATION: only serve group data if the JWT-authenticated user
-    # is a member of that group.
     group = _get_group_or_403(request, group_id)
     if group is None:
         return Response({'detail': 'not found'}, status=404)

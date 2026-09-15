@@ -48,9 +48,6 @@ export default function GroupDetail({ groupId, onBack }) {
     }
     setBusy(true);
     try {
-      // No splits sent: the API splits equally among all group members.
-      // paid_by defaults to the logged-in user server-side; when we picked
-      // another member, the server re-validates that they belong to the group.
       await api.addExpense(groupId, desc, Math.round(dollars * 100), null, payer);
       setDesc(''); setAmount('');
       await load();

@@ -1,7 +1,5 @@
 import React from 'react';
 
-// Initials avatar with a deterministic hue derived from the username,
-// so every member gets a stable, distinguishable color without storage.
 export default function Avatar({ username, size = 'md' }) {
   const name = (username || '?').toString();
   let hue = 7;

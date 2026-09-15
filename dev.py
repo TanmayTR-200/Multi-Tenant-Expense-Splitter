@@ -62,7 +62,6 @@ def pump(name, stream):
                     tag = f'\x1b[90m{tag:<9}\x1b[0m'
                 print(f'{tag} {text}', flush=True)
             except Exception:
-                # Never let a logging hiccup kill the reader thread.
                 pass
     finally:
         stream.close()
@@ -77,15 +76,13 @@ def wait_until_up(port, timeout=60):
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/', timeout=2) as r:
                 return r.status
         except urllib.error.HTTPError as e:
-            return e.code  # server responded (e.g. 401 on /auth/login)
+            return e.code
         except Exception:
             time.sleep(1)
     return None
 
 
 def main():
-    # Windows consoles default to cp1252; force UTF-8 so child-process
-    # output with non-ASCII characters (e.g. Vite's "➜") can't crash us.
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding='utf-8', errors='replace')

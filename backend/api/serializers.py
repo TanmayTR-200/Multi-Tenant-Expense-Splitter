@@ -56,8 +56,6 @@ class ExpenseSplitInputSerializer(serializers.Serializer):
 
 class ExpenseSerializer(serializers.ModelSerializer):
     splits = ExpenseSplitInputSerializer(many=True, required=False)
-    # Optional username of who paid, for recording on behalf of another
-    # member (Splitwise-style). Defaults to the authenticated user.
     paid_by = serializers.CharField(required=False, write_only=True)
 
     class Meta:
@@ -71,8 +69,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
         member_ids = set(group.memberships.values_list('user_id', flat=True))
 
         for s in splits:
-            # TENANT CHECK: the split target must be a member of the group the
-            # authenticated user is operating on. Never trust client IDs.
             if s['user_id'] not in member_ids:
                 raise serializers.ValidationError(
                     f"user {s['user_id']} is not a member of this group"
@@ -84,9 +80,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
                     'split amounts must sum to the expense amount'
                 )
 
-        # TENANT CHECK: a caller may record an expense paid by another
-        # member, but never by a non-member — the payer resolves server-side
-        # to a real User of THIS group, not to whatever the client sends.
         payer_name = data.get('paid_by')
         self.paid_by_user = None
         if payer_name is not None:
@@ -105,13 +98,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
         validated_data.pop('paid_by', None)
         amount = validated_data['amount_cents']
         if not splits:
-            # Default: split equally among all members. Remainder cents
-            # can't divide evenly, so rotate WHICH members absorb them
-            # from one expense to the next — otherwise the same (lowest
-            # id) members overpay by a cent on every expense and the
-            # bias accumulates, e.g. 1000 + 500 over 3 members would
-            # drift to shares of 500.01 / 500.00 / 499.99 instead of
-            # an exact 500 each.
             member_ids = sorted(group.memberships.values_list('user_id', flat=True))
             n = len(member_ids)
             base, rem = divmod(amount, n)
@@ -121,8 +107,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
                 {'user_id': uid, 'amount_cents': base + (1 if i < rem else 0)}
                 for i, uid in enumerate(ordered)
             ]
-        # Payer: the member chosen on the form (validated above), else
-        # the authenticated user.
         paid_by = getattr(self, 'paid_by_user', None) or request.user
         expense = Expense.objects.create(
             group=group, paid_by=paid_by,
